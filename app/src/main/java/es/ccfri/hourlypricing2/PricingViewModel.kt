@@ -39,7 +39,6 @@ import java.util.*
 
 class PricingViewModel(private val repository: SettingsRepository) : ViewModel() {
     private val _currentPrice = MutableStateFlow<Double?>(null)
-    val currentPrice: StateFlow<Double?> = _currentPrice
 
     private val _lastUpdated = MutableStateFlow<Long?>(null)
     val lastUpdated: StateFlow<Long?> = _lastUpdated
@@ -67,7 +66,7 @@ class PricingViewModel(private val repository: SettingsRepository) : ViewModel()
             retrofit: Retrofit
         ): Converter<ResponseBody, *>? {
             val delegate = json.asConverterFactory("application/json".toMediaType())
-                .responseBodyConverter(type, annotations, retrofit) as? Converter<ResponseBody, *>
+                .responseBodyConverter(type, annotations, retrofit)
             
             return Converter<ResponseBody, Any> { value ->
                 val bodyString = value.string()
@@ -93,8 +92,9 @@ class PricingViewModel(private val repository: SettingsRepository) : ViewModel()
 
     val deliveryPrice = combine(
         repository.includeDelivery,
-        repository.deliveryType
-    ) { include, type ->
+        repository.deliveryType,
+        _currentPrice
+    ) { include, type, _ ->
         if (!include) 0.0
         else when (type) {
             DeliveryType.NONE -> 0.0
@@ -129,7 +129,7 @@ class PricingViewModel(private val repository: SettingsRepository) : ViewModel()
                 } catch (e: Exception) {
                     Log.e("PricingViewModel", "Error fetching price", e)
                 }
-                delay(30000) // Refresh twice every minute
+                delay(10000) // Refresh every 10 seconds
             }
         }
     }
@@ -146,7 +146,7 @@ class PricingViewModel(private val repository: SettingsRepository) : ViewModel()
             hour in 13..18 -> 10.0
             hour in 19..20 -> 4.0
             else -> 3.0
-        };
+        }
         return price
     }
 }
