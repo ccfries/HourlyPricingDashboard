@@ -56,6 +56,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -126,7 +128,12 @@ fun DashboardScreen(viewModel: PricingViewModel, onSettingsClick: () -> Unit) {
     }
 
     val price by viewModel.displayPrice.collectAsState(initial = null)
+    val lastUpdated by viewModel.lastUpdated.collectAsState(initial = null)
     val deliveryPrice by viewModel.deliveryPrice.collectAsState(initial = 0.0)
+
+    val timeFormatter = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
+    val lastUpdatedText = lastUpdated?.let { "Updated at ${timeFormatter.format(Date(it))}" } ?: ""
+
     val colorOffset = when {
         deliveryPrice > 0.0 -> 6.0
         else -> 0.0
@@ -185,11 +192,21 @@ fun DashboardScreen(viewModel: PricingViewModel, onSettingsClick: () -> Unit) {
                     color = Color.White,
                     lineHeight = priceFontSize
                 )
-                Text(
-                    text = "per kWh",
-                    fontSize = unitFontSize,
-                    color = Color.White.copy(alpha = 0.8f)
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "per kWh",
+                        fontSize = unitFontSize,
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                    if (lastUpdatedText.isNotEmpty()) {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = lastUpdatedText,
+                            fontSize = (unitFontSize.value * 0.5).sp,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                    }
+                }
             }
 
             // Space between price and delivery note
@@ -293,20 +310,20 @@ fun SettingsScreen(repository: SettingsRepository, onBack: () -> Unit) {
             Spacer(Modifier.weight(1f))
 
             Button(
+                onClick = onBack,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Back")
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Button(
                 onClick = { (context as? Activity)?.finish() },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
                 Text("Exit App")
-            }
-            
-            Spacer(Modifier.height(8.dp))
-
-            Button(
-                onClick = onBack,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Back")
             }
         }
     }

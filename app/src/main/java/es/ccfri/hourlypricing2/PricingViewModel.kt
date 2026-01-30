@@ -41,6 +41,9 @@ class PricingViewModel(private val repository: SettingsRepository) : ViewModel()
     private val _currentPrice = MutableStateFlow<Double?>(null)
     val currentPrice: StateFlow<Double?> = _currentPrice
 
+    private val _lastUpdated = MutableStateFlow<Long?>(null)
+    val lastUpdated: StateFlow<Long?> = _lastUpdated
+
     private val json = Json { 
         ignoreUnknownKeys = true 
         coerceInputValues = true
@@ -119,8 +122,9 @@ class PricingViewModel(private val repository: SettingsRepository) : ViewModel()
                     // Using currenthouraverage to show the price for this hour
                     val prices = service.getCurrentPrices(type = "currenthouraverage")
                     if (prices.isNotEmpty()) {
-                        val priceStr = prices.first().price
-                        _currentPrice.value = priceStr.toDoubleOrNull()
+                        val first = prices.first()
+                        _currentPrice.value = first.price.toDoubleOrNull()
+                        _lastUpdated.value = first.millisUTC.toLongOrNull()
                     }
                 } catch (e: Exception) {
                     Log.e("PricingViewModel", "Error fetching price", e)
