@@ -132,7 +132,7 @@ fun DashboardScreen(viewModel: PricingViewModel, onSettingsClick: () -> Unit) {
     val deliveryPrice by viewModel.deliveryPrice.collectAsState(initial = 0.0)
 
     val timeFormatter = remember { SimpleDateFormat("h:mm a", Locale.getDefault()) }
-    val lastUpdatedText = lastUpdated?.let { "Updated at ${timeFormatter.format(Date(it))}" } ?: ""
+    val lastUpdatedText = lastUpdated?.let { "ComEd price as of ${timeFormatter.format(Date(it))}" } ?: "..."
 
     val colorOffset = when {
         deliveryPrice > 0.0 -> 6.0
@@ -157,8 +157,8 @@ fun DashboardScreen(viewModel: PricingViewModel, onSettingsClick: () -> Unit) {
         val isTablet = maxWidth >= 600.dp
         
         // Scale font sizes based on device type
-        val priceFontSize = if (isTablet) 200.sp else 90.sp
-        val unitFontSize = if (isTablet) 40.sp else 20.sp
+        val priceFontSize = if (isTablet) 150.sp else 60.sp
+        val updatedFontSize = if (isTablet) 30.sp else 15.sp
         val deliveryFontSize = if (isTablet) 28.sp else 14.sp
         val settingsIconSize = if (isTablet) 48.dp else 32.dp
 
@@ -186,26 +186,19 @@ fun DashboardScreen(viewModel: PricingViewModel, onSettingsClick: () -> Unit) {
                 modifier = Modifier.padding(horizontal = 32.dp)
             ) {
                 Text(
-                    text = price?.let { String.format("%.1f¢", it) } ?: "Loading...",
+                    text = price?.let { String.format("%.1f¢/kWh", it) } ?: "Loading...",
                     fontSize = priceFontSize,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     lineHeight = priceFontSize
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                        //Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "per kWh",
-                        fontSize = unitFontSize,
-                        color = Color.White.copy(alpha = 0.8f)
+                        text = lastUpdatedText,
+                        fontSize = (updatedFontSize.value).sp,
+                        color = Color.White.copy(alpha = 0.6f)
                     )
-                    if (lastUpdatedText.isNotEmpty()) {
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = lastUpdatedText,
-                            fontSize = (unitFontSize.value * 0.5).sp,
-                            color = Color.White.copy(alpha = 0.6f)
-                        )
-                    }
                 }
             }
 
