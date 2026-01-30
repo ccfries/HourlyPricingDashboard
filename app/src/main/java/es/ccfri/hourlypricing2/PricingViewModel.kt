@@ -128,6 +128,8 @@ class PricingViewModel(private val repository: SettingsRepository) : ViewModel()
                     }
                 } catch (e: Exception) {
                     Log.e("PricingViewModel", "Error fetching price", e)
+                    _currentPrice.value = null
+                    _lastUpdated.value = null
                 }
                 delay(10000) // Refresh every 10 seconds
             }
