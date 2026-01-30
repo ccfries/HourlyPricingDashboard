@@ -31,6 +31,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -39,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -157,9 +160,9 @@ fun DashboardScreen(viewModel: PricingViewModel, onSettingsClick: () -> Unit) {
                 text = "Charger Disconnected",
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = if (isTablet) 48.dp else 32.dp),
+                    .padding(top = if (isTablet) 32.dp else 12.dp),
                 color = Color.White.copy(alpha = 0.9f),
-                fontSize = if (isTablet) 24.sp else 16.sp,
+                fontSize = if (isTablet) 20.sp else 12.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -226,6 +229,8 @@ fun SettingsScreen(repository: SettingsRepository, onBack: () -> Unit) {
     val deliveryType by repository.deliveryType.collectAsState(initial = DeliveryType.FIXED)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
@@ -236,6 +241,7 @@ fun SettingsScreen(repository: SettingsRepository, onBack: () -> Unit) {
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -276,7 +282,13 @@ fun SettingsScreen(repository: SettingsRepository, onBack: () -> Unit) {
 
             Spacer(Modifier.height(32.dp))
             Text("About", style = MaterialTheme.typography.titleMedium)
-            Text("Copyright 2026 Chris Fries. Licenced under GPLv2.", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = "Copyright 2026 Chris Fries. Licenced under GPLv2.",
+                style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.clickable {
+                    uriHandler.openUri("https://github.com/ccfries/HourlyPricingDashboard")
+                }
+            )
 
             Spacer(Modifier.weight(1f))
 

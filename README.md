@@ -2,15 +2,14 @@
 
 An Android application that displays real-time hourly electricity prices from ComEd. It is designed to be used on a dedicated tablet or phone (e.g., mounted on a wall) to help you monitor electricity costs at a glance.
 
-## Features (can you tell how Gemini likes to brag?)
+## "Features"
 
 - **Real-time Monitoring**: Fetches the latest hourly average price from ComEd's API.
 - **Dynamic Color Coding**: Background color changes based on the current price (Green, Yellow, Orange, Red) to indicate cost levels.
 - **Delivery Pricing**: Option to include delivery costs in the headline price, with support for fixed and time-of-day delivery models.
-- **Immersive Mode**: Full-screen display that hides system bars.
+- **Full Screen**: Hides system bars for a clean look
 - **Always-On Screen**: Prevents the screen from dimming or sleeping while the app is active.
 - **Charging Status**: Alerts you if the device charger is disconnected.
-- **Responsive Design**: Optimized for both phones and tablets.
 
 ## Installation
 
