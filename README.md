@@ -17,6 +17,10 @@ An Android application that displays real-time hourly electricity prices from Co
 2. Open in Android Studio.
 3. Build and run on your device.
 
+## Privacy Policy
+
+No data is collected or transmitted from this application.  No ads are served.  It is using the ComEd API anonymously and all settings are kept on your device only.
+
 ## License
 
 Copyright (C) 2026 Chris Fries
