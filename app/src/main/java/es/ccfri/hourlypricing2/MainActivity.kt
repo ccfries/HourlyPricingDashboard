@@ -22,6 +22,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -43,12 +44,16 @@ class MainActivity : ComponentActivity() {
             NavHost(navController = navController, startDestination = "dashboard") {
                 composable("dashboard") {
                     DashboardScreen(pricingViewModel) {
-                        navController.navigate("settings")
+                        navController.navigate("settings") {
+                            launchSingleTop = true
+                        }
                     }
                 }
                 composable("settings") {
                     SettingsScreen(repository) {
-                        navController.popBackStack()
+                        // Use popBackStack with a route and inclusive=false to ensure 
+                        // we never pop the dashboard itself, which avoids the white screen.
+                        navController.popBackStack("dashboard", inclusive = false)
                     }
                 }
             }
@@ -59,40 +64,86 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun DashboardScreen(viewModel: PricingViewModel, onSettingsClick: () -> Unit) {
     val price by viewModel.displayPrice.collectAsState(initial = null)
-
+    val deliveryPrice by viewModel.deliveryPrice.collectAsState(initial = 0.0)
+    val colorOffset = when {
+        deliveryPrice > 0.0 -> 6.0
+        else -> 0.0
+    }
     val backgroundColor = when {
         price == null -> Color.Gray
-        price!! < 7.0 -> Color(0xFF4CAF50) // Green
-        price!! < 14.0 -> Color(0xFFFFC107) // Yellow
-        else -> Color(0xFFF44336) // Red
+        price!! < (1.0 + colorOffset) -> Color(0xFF006F20) // Green
+        price!! < (8.0 + colorOffset) -> Color(0xFF4CAF50) // Green
+        price!! < (11.0 + colorOffset) -> Color(0xFFFFC107) // Yellow
+        price!! < (14.0 + colorOffset) -> Color(0xFFFF8000) // Orange
+        price!! < (20.0 + colorOffset) -> Color(0xFFF44336) // Reddish
+        else -> Color(0xFF800000) // Red
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(backgroundColor)
-            .clickable { onSettingsClick() },
-        contentAlignment = Alignment.Center
+            .clickable { onSettingsClick() }
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = price?.let { String.format("%.1f¢", it) } ?: "Loading...",
-                fontSize = 120.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-            Text(
-                text = "per kWh",
-                fontSize = 24.sp,
-                color = Color.White.copy(alpha = 0.8f)
-            )
-        }
+        val isTablet = maxWidth >= 600.dp
         
+        // Scale font sizes based on device type
+        val priceFontSize = if (isTablet) 200.sp else 90.sp
+        val unitFontSize = if (isTablet) 40.sp else 20.sp
+        val deliveryFontSize = if (isTablet) 28.sp else 14.sp
+        val settingsIconSize = if (isTablet) 48.dp else 32.dp
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Push price to vertical center
+            Spacer(modifier = Modifier.weight(1f))
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            ) {
+                Text(
+                    text = price?.let { String.format("%.1f¢", it) } ?: "Loading...",
+                    fontSize = priceFontSize,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    lineHeight = priceFontSize
+                )
+                Text(
+                    text = "per kWh",
+                    fontSize = unitFontSize,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+            }
+
+            // Space between price and delivery note
+            Spacer(modifier = Modifier.weight(1f))
+            
+            if (deliveryPrice > 0) {
+                Text(
+                    text = String.format("Includes %.1f¢ delivery", deliveryPrice),
+                    modifier = Modifier.padding(bottom = if (isTablet) 64.dp else 32.dp),
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = deliveryFontSize,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+
         IconButton(
             onClick = onSettingsClick,
-            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(if (isTablet) 24.dp else 8.dp)
         ) {
-            Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.White)
+            Icon(
+                Icons.Default.Settings, 
+                contentDescription = "Settings", 
+                tint = Color.White,
+                modifier = Modifier.size(settingsIconSize)
+            )
         }
     }
 }

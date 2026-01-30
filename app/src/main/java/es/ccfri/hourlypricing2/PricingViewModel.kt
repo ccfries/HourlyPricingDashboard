@@ -10,8 +10,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.ResponseBody
 import retrofit2.Converter
 import retrofit2.Retrofit
@@ -44,7 +45,7 @@ class PricingViewModel(private val repository: SettingsRepository) : ViewModel()
             annotations: Array<Annotation>,
             retrofit: Retrofit
         ): Converter<ResponseBody, *>? {
-            val delegate = json.asConverterFactory(MediaType.parse("application/json")!!)
+            val delegate = json.asConverterFactory("application/json".toMediaType())
                 .responseBodyConverter(type, annotations, retrofit) as? Converter<ResponseBody, *>
             
             return Converter<ResponseBody, Any> { value ->
@@ -52,7 +53,7 @@ class PricingViewModel(private val repository: SettingsRepository) : ViewModel()
                 val jsonStart = bodyString.indexOf("[")
                 if (jsonStart != -1) {
                     val sanitizedJson = bodyString.substring(jsonStart)
-                    val sanitizedBody = ResponseBody.create(MediaType.parse("application/json"), sanitizedJson)
+                    val sanitizedBody = sanitizedJson.toResponseBody("application/json".toMediaType())
                     delegate?.convert(sanitizedBody)
                 } else {
                     Log.e("PricingViewModel", "Invalid JSON response: $bodyString")
@@ -69,20 +70,24 @@ class PricingViewModel(private val repository: SettingsRepository) : ViewModel()
         .build()
         .create(ComEdService::class.java)
 
-    val displayPrice = combine(
-        _currentPrice,
+    val deliveryPrice = combine(
         repository.includeDelivery,
         repository.deliveryType
-    ) { price, include, type ->
-        if (price == null) return@combine null
-        if (!include) return@combine price
-
-        val deliveryCost = when (type) {
+    ) { include, type ->
+        if (!include) 0.0
+        else when (type) {
             DeliveryType.NONE -> 0.0
-            DeliveryType.FIXED -> 6.0 // Fixed delivery cost in cents
+            DeliveryType.FIXED -> 6.0
             DeliveryType.TIME_OF_DAY -> calculateTimeOfDayDelivery()
         }
-        price + deliveryCost
+    }
+
+    val displayPrice = combine(
+        _currentPrice,
+        deliveryPrice
+    ) { price, delivery ->
+        if (price == null) null
+        else price + delivery
     }
 
     init {
@@ -115,8 +120,7 @@ class PricingViewModel(private val repository: SettingsRepository) : ViewModel()
         // Peak: 1 PM - 7 PM
         // Evening: 7 PM - 9 PM
         // Overnight: 9 PM - 12 AM
-        val price = when {hour in 0..5 -> 3.0
-            hour in 6..12 -> 4.0
+        val price = when { hour in 6..12 -> 4.0
             hour in 13..18 -> 10.0
             hour in 19..20 -> 4.0
             else -> 3.0
