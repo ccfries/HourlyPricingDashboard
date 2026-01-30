@@ -1,6 +1,13 @@
 package es.ccfri.hourlypricing2
 
+import android.app.Activity
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -13,9 +20,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -28,6 +39,16 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Make the app full screen
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val controller = WindowInsetsControllerCompat(window, window.decorView)
+        controller.hide(WindowInsetsCompat.Type.systemBars())
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        
+        // Keep the screen on
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
         val repository = SettingsRepository(applicationContext)
         
         setContent {
@@ -63,6 +84,26 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun DashboardScreen(viewModel: PricingViewModel, onSettingsClick: () -> Unit) {
+    val context = LocalContext.current
+    val isCharging by produceState(initialValue = true) {
+        val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val status = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+                value = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                        status == BatteryManager.BATTERY_STATUS_FULL
+            }
+        }
+        val initialIntent = context.registerReceiver(receiver, filter)
+        val initialStatus = initialIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+        value = initialStatus == BatteryManager.BATTERY_STATUS_CHARGING ||
+                initialStatus == BatteryManager.BATTERY_STATUS_FULL
+        
+        awaitDispose {
+            context.unregisterReceiver(receiver)
+        }
+    }
+
     val price by viewModel.displayPrice.collectAsState(initial = null)
     val deliveryPrice by viewModel.deliveryPrice.collectAsState(initial = 0.0)
     val colorOffset = when {
@@ -92,6 +133,18 @@ fun DashboardScreen(viewModel: PricingViewModel, onSettingsClick: () -> Unit) {
         val unitFontSize = if (isTablet) 40.sp else 20.sp
         val deliveryFontSize = if (isTablet) 28.sp else 14.sp
         val settingsIconSize = if (isTablet) 48.dp else 32.dp
+
+        if (!isCharging) {
+            Text(
+                text = "Charger Disconnected",
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = if (isTablet) 48.dp else 32.dp),
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = if (isTablet) 24.sp else 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -154,6 +207,7 @@ fun SettingsScreen(repository: SettingsRepository, onBack: () -> Unit) {
     val includeDelivery by repository.includeDelivery.collectAsState(initial = false)
     val deliveryType by repository.deliveryType.collectAsState(initial = DeliveryType.FIXED)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -202,7 +256,22 @@ fun SettingsScreen(repository: SettingsRepository, onBack: () -> Unit) {
                 }
             }
 
+            Spacer(Modifier.height(32.dp))
+            Text("About", style = MaterialTheme.typography.titleMedium)
+            Text("Copyright 2026 Chris Fries", style = MaterialTheme.typography.bodyMedium)
+
             Spacer(Modifier.weight(1f))
+
+            Button(
+                onClick = { (context as? Activity)?.finish() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Exit App")
+            }
+            
+            Spacer(Modifier.height(8.dp))
+
             Button(
                 onClick = onBack,
                 modifier = Modifier.fillMaxWidth()
